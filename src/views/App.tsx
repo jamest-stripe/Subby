@@ -36,8 +36,6 @@ const CustomerDetailView = ({ userContext, environment }: ExtensionContextValue)
   interface Item {
     id:string
     price: string
-    amount:string
-    productName:string
     iterations:string
     coupon:string
   }
@@ -75,8 +73,28 @@ useEffect(() =>{
 
 //Create the Schedule
 //const phases = parsePhaseArray(items);
-
-
+const createSchedule = () => {
+  const phases = []
+  for (let i = 0; i < items.length; i++){
+    console.log(items[i]);
+    phases.push({
+        items: [
+          {price: items[i].price, quantity: 1}
+          ],
+        iterations: items[i]?.iterations || 1,
+        coupon: items[i]?.coupon,
+        metadata:{"array_id":items[i].id}
+    })
+  }
+console.log(phases);
+const now = Math.round(Date.now()/1000);
+stripe.subscriptionSchedules.create({
+  customer: environment.objectContext?.id,
+  start_date:now,
+  end_behavior:"release",
+  phases:phases
+})
+}
 //View Components//
   return (
     <ContextView 
@@ -114,7 +132,7 @@ useEffect(() =>{
       title="Create new subscription schedule"
       shown={showDataInput}
       onClose={() => setShowDataInput(false)}
-      primaryAction={<Button type='primary' >Save</Button>}
+      primaryAction={<Button type='primary' onPress={createSchedule} >Save</Button>}
       secondaryAction={<Button onPress={() => setShowDataInput(false)}>Cancel</Button>}
       >
         
