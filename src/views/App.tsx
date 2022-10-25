@@ -74,7 +74,7 @@ useEffect(() =>{
 }, [getCoupons]);
 
 //Create the Schedule
-const phases = parsePhaseArray(items);
+//const phases = parsePhaseArray(items);
 
 
 //View Components//

@@ -19,6 +19,10 @@
     {
       "permission": "plan_read",
       "purpose": "Review Prices"
+    },
+    {
+      "permission": "coupon_read",
+      "purpose": "Retrieve promo discounts"
     }
   ],
   "app_backend": {
