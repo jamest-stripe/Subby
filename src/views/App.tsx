@@ -1,13 +1,13 @@
 import { Banner, Button, Box, ContextView, Divider, FormFieldGroup, Inline, Link, TableHeaderCell, Table, TableHead, TableRow, TableBody, Spinner, Icon, List, ListItem, Badge, FocusView, Select, TextField, TableCell } from "@stripe/ui-extension-sdk/ui";
 import type { ExtensionContextValue } from "@stripe/ui-extension-sdk/context";
-
+import { showToast, ToastType} from "@stripe/ui-extension-sdk/utils"
 import BrandIcon from "./brand_icon.svg";
 import { Stripe } from "stripe";
 import { createHttpClient, STRIPE_API_KEY } from '@stripe/ui-extension-sdk/http_client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { produce } from 'immer';
 import { generate } from "shortid";
-import shortid from "shortid";
+//import shortid from "shortid";
 /**
  * This is a view that is rendered in the Stripe dashboard's customer detail page.
  * In stripe-app.json, this view is configured with stripe.dashboard.customer.detail viewport.
@@ -71,9 +71,11 @@ useEffect(() =>{
   getCoupons();
 }, [getCoupons]);
 
+
+
 //Create the Schedule
-//const phases = parsePhaseArray(items);
-const createSchedule = () => {
+const createSchedule = async () => {
+  
   const phases = []
   for (let i = 0; i < items.length; i++){
     console.log(items[i]);
@@ -88,13 +90,21 @@ const createSchedule = () => {
   }
 console.log(phases);
 const now = Math.round(Date.now()/1000);
-stripe.subscriptionSchedules.create({
-  customer: environment.objectContext?.id,
-  start_date:now,
-  end_behavior:"release",
-  phases:phases
-})
+try {
+  await stripe.subscriptionSchedules.create({
+    customer: environment.objectContext?.id,
+    start_date:now,
+    end_behavior:"release",
+    phases:phases
+  });
+  setShowDataInput(false);
+  setItems([])
+} catch (error) {
+  console.log(error)
 }
+
+}
+
 //View Components//
   return (
     <ContextView 
@@ -111,16 +121,17 @@ stripe.subscriptionSchedules.create({
         }}>
           <List>
             {schedules && schedules.map((schedule)=>(
-              
+             
              <ListItem
               key={schedule.id.toString()}
               value={
-                <Button type="primary">
+                <Button type="primary"
+                href={`${BASE_URL}/subscriptions/${schedule.subscription}`}>
                   <Icon name = "external" size="xsmall"></Icon>
                 </Button>
               }
               title={<Box>{schedule.subscription}</Box>}
-              secondaryTitle={<Box>Status:{schedule.status}</Box>}
+              secondaryTitle={<Box><Badge type="positive">{schedule.status}</Badge></Box>}
               id={schedule.id}
               />
 ))}
@@ -240,7 +251,7 @@ stripe.subscriptionSchedules.create({
           }}
           >Add Phase</Button>
         </Box>
-        <Box>{JSON.stringify(items)}</Box>
+        
       </FocusView>
     </ContextView>
   );
