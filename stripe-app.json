@@ -1,8 +1,8 @@
 {
   "id": "com.example.biller",
   "version": "0.0.1",
-  "name": "Biller",
-  "icon": "",
+  "name": "Subby",
+  "icon": "./src/views/brand_icon.svg",
   "permissions": [
     {
       "permission": "customer_write",

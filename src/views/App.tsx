@@ -109,6 +109,8 @@ try {
   return (
     <ContextView 
     title="Active Subscription Schedules"
+    //brandColor="#B4C4AE"
+    brandIcon={BrandIcon}
     description = {`Customer: ${userContext.account.name}`}
     primaryAction = {<Button type="primary" onPress={() => setShowDataInput(true)}>Create Subscription Schedule</Button>}
     >
