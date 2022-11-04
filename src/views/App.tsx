@@ -1,6 +1,6 @@
 import { Banner, Button, Box, ContextView, Divider, FormFieldGroup, Inline, Link, TableHeaderCell, Table, TableHead, TableRow, TableBody, Spinner, Icon, List, ListItem, Badge, FocusView, Select, TextField, TableCell } from "@stripe/ui-extension-sdk/ui";
 import type { ExtensionContextValue } from "@stripe/ui-extension-sdk/context";
-import { showToast, ToastType} from "@stripe/ui-extension-sdk/utils"
+//import { showToast, ToastType} from "@stripe/ui-extension-sdk/utils"
 import BrandIcon from "./brand_icon.svg";
 import { Stripe } from "stripe";
 import { createHttpClient, STRIPE_API_KEY } from '@stripe/ui-extension-sdk/http_client';
