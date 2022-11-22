@@ -1,7 +1,7 @@
-import { Banner, Button, Box, ContextView, Divider, FormFieldGroup, Inline, Link, TableHeaderCell, Table, TableHead, TableRow, TableBody, Spinner, Icon, List, ListItem, Badge, FocusView, Select, TextField, TableCell } from "@stripe/ui-extension-sdk/ui";
+import { Banner, Button, Box, ContextView, Divider, FormFieldGroup, Inline, Link, TableHeaderCell, Table, TableHead, TableRow, TableBody, Spinner, Icon, List, ListItem, Badge, FocusView, Select, TextField, TableCell, Tab, DateField, Switch } from "@stripe/ui-extension-sdk/ui";
 import type { ExtensionContextValue } from "@stripe/ui-extension-sdk/context";
 //import { showToast, ToastType} from "@stripe/ui-extension-sdk/utils"
-import BrandIcon from "./brand_icon.svg";
+import BrandIcon from "./subby_logo.svg";
 import { Stripe } from "stripe";
 import { createHttpClient, STRIPE_API_KEY } from '@stripe/ui-extension-sdk/http_client';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -29,21 +29,26 @@ const CustomerDetailView = ({ userContext, environment }: ExtensionContextValue)
       ? `https://dashboard.stripe.com/${environment.mode}`
       : `https://dashboard.stripe.com`;
   const [showDataInput, setShowDataInput] = useState<boolean>(false);
+  const [prePaid, setPrePaid] = useState<boolean>(false);
   const [schedules, setSchedules] = useState<Stripe.SubscriptionSchedule[]>();
   const [prices, setPrices] = useState<Stripe.Price[]>();
   const [coupons, setCoupons] = useState<Stripe.Coupon[]>();
+  const [startDate, setStartDate] = useState<string>();
+  const [endDate, setEndDate] = useState<string>();
+  const [selectedPrice, setSelectedPrice] = useState<string>("")
   const [items, setItems] = useState<Item[]>([]);
   interface Item {
     id:string
-    price: string
+    //price: string
     iterations:string
     coupon:string
   }
+ 
   
 
   //Get Current Subscription Schedules
   const getSchedules = useCallback(async () => {
-    const data = await stripe.subscriptionSchedules.list({customer:environment.objectContext?.id,});
+    const data = await stripe.subscriptionSchedules.list({customer:environment.objectContext?.id},);
     setSchedules(data.data);
   }, []);
 
@@ -51,70 +56,77 @@ const CustomerDetailView = ({ userContext, environment }: ExtensionContextValue)
     getSchedules();
   }, [getSchedules]);
 
-//Get Products and Extend Prices
-const getPrices = useCallback(async () => {
-  const data = await stripe.prices.list({active:true, expand:['data.product']});
-  setPrices(data.data);
-}, []);
 
-useEffect(() => {
-  getPrices();
-}, [getPrices]);
+  //Get Prices
+  const getPrices = useCallback(async () => {
+    const data = await stripe.prices.list({active:true, expand:['data.product'], type:'recurring'});
+    setPrices(data.data);
+  }, []);
 
-//Get Coupons
-const getCoupons = async () => {
-  const data = await stripe.coupons.list();
-  setCoupons(data.data);
-}
+  useEffect(() => {
+    getPrices();
+  }, [getPrices]);
 
-useEffect(() =>{
-  getCoupons();
-}, [getCoupons]);
-
-
-
-//Create the Schedule
-const createSchedule = async () => {
-  
-  const phases = []
-  for (let i = 0; i < items.length; i++){
-    console.log(items[i]);
-    phases.push({
-        items: [
-          {price: items[i].price, quantity: 1}
-          ],
-        iterations: items[i]?.iterations || 1,
-        coupon: items[i]?.coupon,
-        metadata:{"array_id":items[i].id}
-    })
+  //Get Coupons
+  const getCoupons = async () => {
+    const data = await stripe.coupons.list();
+    setCoupons(data.data);
   }
-console.log(phases);
-const now = Math.round(Date.now()/1000);
-try {
-  await stripe.subscriptionSchedules.create({
-    customer: environment.objectContext?.id,
-    start_date:now,
-    end_behavior:"release",
-    phases:phases
-  });
-  setShowDataInput(false);
-  setItems([])
-} catch (error) {
-  console.log(error)
-}
+
+  useEffect(() =>{
+    getCoupons();
+  }, [getCoupons]);
+
+
+
+  //Create the Schedule
+  const createSchedule = async () => {
+    
+    const phases = []
+    for (let i = 0; i < items.length; i++){
+      console.log(items[i]);
+      phases.push({
+          items: [
+            {price: selectedPrice, quantity: 1}
+            ],
+          iterations: items[i]?.iterations || 1,
+          coupon: items[i]?.coupon,
+          metadata:{"array_id":items[i].id}
+      })
+    }
+  console.log(phases);
+  const sDate = Math.round(Date.parse(startDate)/1000)
+  try {
+    await stripe.subscriptionSchedules.create({
+      customer: environment.objectContext?.id,
+      start_date:sDate,
+      end_behavior:"release",
+      phases:phases,
+      metadata:{
+        "pre-paid":prePaid,
+        "start_date":startDate,
+        "end_date":endDate,
+      },
+    });
+    setShowDataInput(false);
+    setItems([])
+  } catch (error) {
+    console.log(error)
+  }
 
 }
 
 //View Components//
   return (
     <ContextView 
-    title="Active Subscription Schedules"
+    title={`Overview`}
     //brandColor="#B4C4AE"
     brandIcon={BrandIcon}
-    description = {`Customer: ${userContext.account.name}`}
-    primaryAction = {<Button type="primary" onPress={() => setShowDataInput(true)}>Create Subscription Schedule</Button>}
     >
       {/*Home Page View*/}
+      <Box css={{paddingBottom:'large'}}>
+      <Button css={{width: 'fill', alignX: 'center'}}type="primary" onPress={() => setShowDataInput(true)}>Create a new schedule</Button>
+      </Box>
       <Box
         css={{
           //padding:'large',
@@ -128,30 +140,63 @@ try {
               key={schedule.id.toString()}
               value={
                 <Button type="primary"
-                href={`${BASE_URL}/subscriptions/${schedule.subscription}`}>
+                href={`${BASE_URL}/subscription_schedules/${schedule.id}`}>
                   <Icon name = "external" size="xsmall"></Icon>
                 </Button>
               }
-              title={<Box>{schedule.subscription}</Box>}
-              secondaryTitle={<Box><Badge type="positive">{schedule.status}</Badge></Box>}
+              title={<Box>Start date: {schedule?.metadata.start_date}</Box>}
+              secondaryTitle={<Box>Status: {schedule.status}</Box>}
               id={schedule.id}
               />
 ))}
           </List>
       </Box>
+      
 
     {/* Create New Schedule View */}
     <FocusView
-      title="Create new subscription schedule"
+      title="Create a new schedule"
       shown={showDataInput}
       onClose={() => setShowDataInput(false)}
       primaryAction={<Button type='primary' onPress={createSchedule} >Save</Button>}
       secondaryAction={<Button onPress={() => setShowDataInput(false)}>Cancel</Button>}
       >
-        
+          <FormFieldGroup 
+            legend="Subscription details" 
+          >
+            <DateField label="Start date" description="Start date" hiddenElements={['label']} onChange={(e) => {
+              setStartDate(e.target.value);
+            }}></DateField>
+            <DateField label="End date" description="End date" hiddenElements={['label']} onChange={(e) => {
+              setEndDate(e.target.value);
+            }}></DateField>
+            <Box
+            css={{
+              paddingTop:"large"
+            }}><Switch label="Pre-paid?" description="Pre-paid?" hiddenElements={['label']} onChange={(e) => {
+              setPrePaid(e.target.checked);
+            }}/></Box>
+            
+          </FormFieldGroup>
+          <FormFieldGroup>
+            <Select label="Product" description="Product" hiddenElements={['label']} onChange={(e) => {
+              setSelectedPrice(e.target.value)
+              console.log(Math.round(Date.parse(startDate)/1000))
+            }}>
+              {prices?.map((price) => (
+                <option
+                key={price.id}
+                value={price.id}
+                id={price.id}>{`${price.product?.name} - ${price?.nickname} - ${("$"+ price?.unit_amount/100)}`}</option>
+              ))}</Select>
+          </FormFieldGroup>
+
+
+          
        {items.map((i, index) => {
-        return (
+        return (       
           <Box
+          
           css={{
             width:'fill',
             paddingY:'small',
@@ -160,26 +205,13 @@ try {
             marginY:"large",
           }}
           key={i.id}>
-            <Inline></Inline>
-            <Select 
-            name='product'
-            label='Select a product & price'
-            aria-label="select product and price"
-            onChange={(e) => {
-              const price = e.target.value;
-              setItems(currentItem => 
-                produce(currentItem, v => {
-                  v[index].price = price;
-                })
-              );
-            }} value={i.price}>
-              {prices?.map((price) => (
-                <option
-                key={price.id}
-                value={price.id}
-                id={price.id}>{`${price.product?.name} - ${price?.nickname} - ${("$"+ price?.unit_amount/100)}`}</option>
-              ))}
-            </Select>
+            <Inline
+              css={{
+                font: 'body',
+                color: 'primary',
+                fontWeight: 'semibold',
+              }}
+            >{`Phase ${index}`}</Inline>
             <Box
         css={{
           paddingY:'small',
@@ -198,6 +230,7 @@ try {
             name="discount"
             label="Select a discount to apply"
           >
+            <option>No discount</option>
             {coupons?.map((discount) => (
               <option
               key={discount.id}
@@ -225,7 +258,6 @@ try {
             <option value="4">4</option>
             <option value="5">5</option>
             <option value="6">6</option>
-            <option value="ongoing">Ongoing</option>
           </Select>
           </Box>
           
