@@ -69,7 +69,7 @@ const CustomerDetailView = ({ userContext, environment }: ExtensionContextValue)
 
   //Get Coupons
   const getCoupons = async () => {
-    const data = await stripe.coupons.list();
+    const data = await stripe.coupons.list({limit:100});
     setCoupons(data.data);
   }
 

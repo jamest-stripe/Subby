@@ -1,6 +1,6 @@
 {
   "id": "com.example.biller",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "name": "Subby",
   "icon": "./src/views/subby_logo.png",
   "permissions": [
